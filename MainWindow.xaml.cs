@@ -21,8 +21,28 @@ using GothicIni;
 
 
 
+
 namespace GothicUpdater
 {
+    public static class FolderPicker
+    {
+        public static string PickFolder()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                CheckFileExists = false,
+                FileName = "Select folder"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                return System.IO.Path.GetDirectoryName(dialog.FileName);
+            }
+
+            return null;
+        }
+    }
+
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         static string ApplicationName = "GothicUpdater";
@@ -131,47 +151,44 @@ namespace GothicUpdater
         {
             while (true)
             {
-                using (var dialog = new FolderBrowserDialog())
+                string folder = FolderPicker.PickFolder();
+                if (!string.IsNullOrEmpty(folder))
                 {
-                    dialog.Description = "Select Gothic 2 installation directory";
-                    dialog.ShowNewFolderButton = true;
+                    
+                    string selectedPath = folder;
 
-                    if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    // Validate required subfolders and file
+                    string[] requiredFolders = { "_work", "Miles", "Data", "system" };
+                    string requiredFile = Path.Combine(selectedPath, "Data", "AB_scripts.vdf");
+
+                    bool allFoldersExist = requiredFolders.All(folder =>
+                        Directory.Exists(Path.Combine(selectedPath, folder)));
+
+                    bool fileExists = File.Exists(requiredFile);
+
+                    if (allFoldersExist && fileExists)
                     {
-                        string selectedPath = dialog.SelectedPath;
-
-                        // Validate required subfolders and file
-                        string[] requiredFolders = { "_work", "Miles", "Data", "system" };
-                        string requiredFile = Path.Combine(selectedPath, "Data", "AB_scripts.vdf");
-
-                        bool allFoldersExist = requiredFolders.All(folder =>
-                            Directory.Exists(Path.Combine(selectedPath, folder)));
-
-                        bool fileExists = File.Exists(requiredFile);
-
-                        if (allFoldersExist && fileExists)
-                        {
                             
-                            _initialSettingsLoader.SaveOrUpdateSetting("Paths", "NewBalanceFolderPath", selectedPath);
-                            SetPathToDependencies(selectedPath);
-                            break; // exit the loop
-                        }
-                        else
-                        {
-                            System.Windows.MessageBox.Show(
-                                "Toto není validní složka NB.\n\n",
-                                "Invalid Folder",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning
-                            );
-                            // Loop will continue and reopen dialog
-                        }
+                        _initialSettingsLoader.SaveOrUpdateSetting("Paths", "NewBalanceFolderPath", selectedPath);
+                        SetPathToDependencies(selectedPath);
+                        break; // exit the loop
                     }
                     else
                     {
-                        break; // user canceled
+                        System.Windows.MessageBox.Show(
+                            "Toto není validní složka NB.\n\n",
+                            "Invalid Folder",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning
+                        );
+                        // Loop will continue and reopen dialog
                     }
                 }
+                else
+                {
+                    break; // user canceled
+                }
+                
             }
         }
 
@@ -189,15 +206,14 @@ namespace GothicUpdater
 
             if (result == MessageBoxResult.OK)
             {
-                using (var dialog = new FolderBrowserDialog())
+                
+
+                string folder = FolderPicker.PickFolder();
+                if (!string.IsNullOrEmpty(folder))
                 {
-                    dialog.Description = "Select Gothic 2 installation directory";
-                    if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                    {
-                        FolderPathTextBox.Text = dialog.SelectedPath;
-                        _pluginInstaller.SetBaseDirectory(dialog.SelectedPath);
-                        return true;
-                    }
+                    FolderPathTextBox.Text = folder;
+                    _pluginInstaller.SetBaseDirectory(folder);
+                    return true;
                 }
             }
             return false;
