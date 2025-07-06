@@ -21,6 +21,15 @@ namespace GothicIni
         private Dictionary<string, string> newValues = new();
         public List<SwitchConfig> switches = new();
         private string[] iniLines;
+        private SwitchConfig ExtModeActivateConfig = new SwitchConfig
+        {          
+            Key = "extModeActivate",
+            Description = "",
+            OffValue = "0",
+            OnValue = "1",
+            LineIndex = -1,
+        };
+
 
         public GothicIniLoader(string basePath)
         {
@@ -48,6 +57,7 @@ namespace GothicIni
 
             using var reader = new StreamReader(stream);
             string? configLine;
+            ExtModeActivateConfig.LineIndex = FindSettingLineIndex(iniLines, ExtModeActivateConfig.Key);
             while ((configLine = reader.ReadLine()) != null)
             {
                 configLine = configLine.Trim();
@@ -125,6 +135,19 @@ namespace GothicIni
                 : "0";
         }
 
+        public void ApplyExtModeActivate(SwitchConfig switchState,bool extMode)
+        {
+            if (extMode)
+            {
+                iniLines[switchState.LineIndex] = $"{switchState.Key}={switchState.OnValue}";
+            }
+            else
+            {
+                iniLines[switchState.LineIndex] = $"{switchState.Key}={switchState.OffValue}";
+            }
+            
+        }
+
         public void ApplySwitches(bool[] switchStates)
         {
             if (switchStates.Length != switches.Count)
@@ -136,18 +159,24 @@ namespace GothicIni
 
                 if (!switchStates[i])
                 {
-                    if (sw.LineIndex >= 0 && sw.LineIndex < iniLines.Length)
+                    if (sw.Key == "extMode")
                     {
-                        iniLines[sw.LineIndex] = $"{sw.Key}={sw.OffValue}";
+                        ApplyExtModeActivate(ExtModeActivateConfig, false);
                     }
+
+                    iniLines[sw.LineIndex] = $"{sw.Key}={sw.OffValue}";
+                    
 
                 }
                 else
                 {
-                    if (sw.LineIndex >= 0 && sw.LineIndex < iniLines.Length)
+                    if (sw.Key == "extMode")
                     {
-                        iniLines[sw.LineIndex] = $"{sw.Key}={sw.OnValue}";
+                        ApplyExtModeActivate(ExtModeActivateConfig, true);
                     }
+                     
+                    iniLines[sw.LineIndex] = $"{sw.Key}={sw.OnValue}";
+                    
                 }
                 
             }
